@@ -78,6 +78,7 @@
     .btn {
       height: 46px; display: inline-flex; align-items: center; justify-content: center;
       border: 0; border-radius: 10px; padding: 0 20px; font-weight: 800; font-size: 14px;
+      transition: background-color 0.2s;
     }
     .btn-gold { color: var(--ink); background: var(--gold); }
     .btn-gold:hover { background: var(--gold-hover); }
@@ -88,12 +89,6 @@
     .sidebar { background: var(--ink); border-radius: var(--radius-xl); padding: 28px 20px; color: white; display: flex; flex-direction: column; }
     .sidebar-logo { max-width: 180px; width: 100%; margin: 0 auto; display: block; }
     .workspace { background: rgba(255,255,255,.95); border-radius: var(--radius-xl); padding: 32px; box-shadow: var(--shadow); overflow-x: auto; }
-
-    .nav-btn { 
-      width: 100%; height: 46px; border: 0; background: transparent; color: #b9b7c3; text-align: left; 
-      padding: 0 16px; font-weight: 700; border-radius: 12px; margin-top: 8px; display: flex; align-items: center; gap: 10px;
-    }
-    .nav-btn.active { background: var(--gold); color: var(--ink); }
 
     /* TABLE DESIGN */
     table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
@@ -137,51 +132,43 @@
   <div id="appShell" class="app-shell" hidden>
     <aside class="sidebar">
       <img src="https://lh3.googleusercontent.com/d/1mGDQ-GSjWUqgOBPfiH8YesE3cr5d8dW6" alt="Dwyer Logo" class="sidebar-logo">
-      <div style="margin-top: 40px;">
-        <button class="nav-btn active" id="btnDash" onclick="switchTab('dashboard')"><i class="bi bi-grid-fill"></i> Leads Dashboard</button>
-        <button class="nav-btn" id="btnAgents" onclick="switchTab('agents')"><i class="bi bi-people-fill"></i> Agents & Users</button>
+      
+      <div style="margin-top: 40px; background: rgba(255,255,255,0.05); padding: 14px; border-radius: 12px; text-align: center;">
+        <i class="bi bi-shield-check" style="font-size: 24px; color: var(--gold);"></i>
+        <div style="font-size: 13px; font-weight: 700; margin-top: 6px;">WebLeads Connected</div>
+        <div style="font-size: 11px; opacity: 0.5;">Zapier Live Sync</div>
       </div>
+
       <div style="margin-top: auto;">
         <div id="agentProfileName" style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">Suzanne Dwyer</div>
         <div id="agentProfileRole" style="font-size: 12px; opacity: 0.6; margin-bottom: 12px;">Administrator</div>
-        <button onclick="handleLogout()" class="btn btn-ink" style="width:100%; height:40px;"><i class="bi bi-box-arrow-right" style="margin-right: 8px;"></i> Log Out</button>
+        <button onclick="handleLogout()" class="btn btn-ink" style="width:100%; height:40px; border: 1px solid rgba(255,255,255,0.2);"><i class="bi bi-box-arrow-right" style="margin-right: 8px;"></i> Log Out</button>
       </div>
     </aside>
 
     <main class="workspace">
-      <!-- LEADS TAB -->
-      <div id="dashboardView">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
           <h2 style="margin: 0;">Incoming Leads</h2>
-          <button class="btn btn-ink" onclick="loadData()"><i class="bi bi-arrow-clockwise" style="margin-right:6px;"></i> Refresh</button>
+          <p style="margin: 4px 0 0 0; color: var(--muted); font-size: 13px;">Real-time stream from WebLeads sheet</p>
         </div>
-        
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Lead Name</th>
-              <th>Contact Info</th>
-              <th>Zip</th>
-              <th>Insurance Type</th>
-              <th>Status</th>
-              <th>Assigned Agent</th>
-            </tr>
-          </thead>
-          <tbody id="leadsBody"></tbody>
-        </table>
+        <button class="btn btn-ink" onclick="loadData()"><i class="bi bi-arrow-clockwise" style="margin-right:6px;"></i> Refresh</button>
       </div>
-
-      <!-- AGENTS TAB -->
-      <div id="agentsView" hidden>
-        <h2>Agents & System Users</h2>
-        <table>
-          <thead>
-            <tr><th>Full Name</th><th>Username</th><th>Email</th><th>Role</th></tr>
-          </thead>
-          <tbody id="agentsBody"></tbody>
-        </table>
-      </div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Lead Name</th>
+            <th>Contact Info</th>
+            <th>Zip</th>
+            <th>Insurance Type</th>
+            <th>Status</th>
+            <th>Assigned Agent</th>
+          </tr>
+        </thead>
+        <tbody id="leadsBody"></tbody>
+      </table>
     </main>
   </div>
 
@@ -227,7 +214,8 @@
         const res = await apiCall('bootstrap');
         if (res.ok) {
           renderLeads(res.contacts || []);
-          renderAgents(res.sellers || []);
+        } else {
+          console.error("API Error:", res.error);
         }
       } catch (e) {
         console.error("Error loading data:", e);
@@ -265,25 +253,6 @@
           <td>${c.agent || 'Unassigned'}</td>
         </tr>
       `).join('');
-    }
-
-    function renderAgents(agents) {
-      const tbody = document.getElementById('agentsBody');
-      tbody.innerHTML = agents.length ? agents.map(a => `
-        <tr>
-          <td><strong>${a.name}</strong></td>
-          <td><code>${a.username}</code></td>
-          <td>${a.email}</td>
-          <td>${a.role === 'admin' ? 'Administrator' : 'Agent'}</td>
-        </tr>
-      `).join('') : '<tr><td colspan="4" style="text-align:center;">No agents registered.</td></tr>';
-    }
-
-    function switchTab(tab) {
-      document.getElementById('dashboardView').hidden = (tab !== 'dashboard');
-      document.getElementById('agentsView').hidden = (tab !== 'agents');
-      document.getElementById('btnDash').classList.toggle('active', tab === 'dashboard');
-      document.getElementById('btnAgents').classList.toggle('active', tab === 'agents');
     }
 
     function handleLogout() {
