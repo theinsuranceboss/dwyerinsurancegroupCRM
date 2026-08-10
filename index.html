@@ -122,7 +122,7 @@
             <input type="password" id="loginPassword" placeholder="••••••••" required>
           </div>
           <div id="loginError" style="color: #e53e3e; font-size: 13px; margin-bottom: 12px; font-weight: 600;"></div>
-          <button type="submit" class="btn btn-gold" style="width:100%;">Access Portal</button>
+          <button type="submit" id="submitBtn" class="btn btn-gold" style="width:100%;">Access Portal</button>
         </form>
       </div>
     </div>
@@ -136,7 +136,7 @@
       <div style="margin-top: 40px; background: rgba(255,255,255,0.05); padding: 14px; border-radius: 12px; text-align: center;">
         <i class="bi bi-shield-check" style="font-size: 24px; color: var(--gold);"></i>
         <div style="font-size: 13px; font-weight: 700; margin-top: 6px;">WebLeads Connected</div>
-        <div style="font-size: 11px; opacity: 0.5;">Zapier Live Sync</div>
+        <div style="font-size: 11px; opacity: 0.5;">Live System Sync</div>
       </div>
 
       <div style="margin-top: auto;">
@@ -188,6 +188,13 @@
 
     async function handleLogin(e) {
       e.preventDefault();
+      const errBox = document.getElementById('loginError');
+      const btn = document.getElementById('submitBtn');
+      
+      errBox.innerText = '';
+      btn.innerText = 'Authenticating...';
+      btn.disabled = true;
+
       const username = document.getElementById('loginUsername').value;
       const password = document.getElementById('loginPassword').value;
 
@@ -202,10 +209,13 @@
           }
           loadData();
         } else {
-          document.getElementById('loginError').innerText = res.error || 'Authentication failed.';
+          errBox.innerText = res.error || 'Invalid username or password.';
         }
       } catch (err) {
-        document.getElementById('loginError').innerText = 'Connection error.';
+        errBox.innerText = 'Connection error. Please try again.';
+      } finally {
+        btn.innerText = 'Access Portal';
+        btn.disabled = false;
       }
     }
 
