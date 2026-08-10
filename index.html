@@ -71,14 +71,14 @@
     .field { display: grid; gap: 6px; margin-bottom: 16px; }
     .field label { font-size: 11px; font-weight: 800; color: #4c495b; text-transform: uppercase; letter-spacing: 0.5px; }
     input, select { 
-      width: 100%; height: 46px; border: 1px solid #dddbe5; border-radius: 10px; padding: 0 14px; font-size: 14px;
+      width: 100%; height: 44px; border: 1px solid #dddbe5; border-radius: 10px; padding: 0 14px; font-size: 14px;
     }
     input:focus, select:focus { outline: none; border-color: var(--gold); }
 
     .btn {
-      height: 46px; display: inline-flex; align-items: center; justify-content: center;
+      height: 44px; display: inline-flex; align-items: center; justify-content: center;
       border: 0; border-radius: 10px; padding: 0 20px; font-weight: 800; font-size: 14px;
-      transition: background-color 0.2s;
+      transition: background-color 0.2s, opacity 0.2s;
     }
     .btn-gold { color: var(--ink); background: var(--gold); }
     .btn-gold:hover { background: var(--gold-hover); }
@@ -96,6 +96,26 @@
     td { padding: 14px; border-top: 1px solid var(--line); vertical-align: middle; }
     .badge-type { background: #eef2ff; color: #4338ca; padding: 4px 8px; border-radius: 6px; font-weight: 700; text-transform: uppercase; font-size: 11px; }
     .badge-status { background: #ecfdf5; color: #047857; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; }
+
+    .agent-select {
+      height: 36px;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fdfdfd;
+    }
+
+    /* MODAL STYLES */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(25, 24, 37, 0.6); backdrop-filter: blur(4px);
+      display: grid; place-items: center; z-index: 999;
+    }
+    .modal-card {
+      background: white; border-radius: 20px; padding: 32px; width: min(480px, 90%);
+      box-shadow: var(--shadow);
+    }
   </style>
 </head>
 <body>
@@ -140,8 +160,8 @@
       </div>
 
       <div style="margin-top: auto;">
-        <div id="agentProfileName" style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">Suzanne Dwyer</div>
-        <div id="agentProfileRole" style="font-size: 12px; opacity: 0.6; margin-bottom: 12px;">Administrator</div>
+        <div id="agentProfileName" style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">User</div>
+        <div id="agentProfileRole" style="font-size: 12px; opacity: 0.6; margin-bottom: 12px; text-transform: capitalize;">Agent</div>
         <button onclick="handleLogout()" class="btn btn-ink" style="width:100%; height:40px; border: 1px solid rgba(255,255,255,0.2);"><i class="bi bi-box-arrow-right" style="margin-right: 8px;"></i> Log Out</button>
       </div>
     </aside>
@@ -152,7 +172,10 @@
           <h2 style="margin: 0;">Incoming Leads</h2>
           <p style="margin: 4px 0 0 0; color: var(--muted); font-size: 13px;">Real-time stream from WebLeads sheet</p>
         </div>
-        <button class="btn btn-ink" onclick="loadData()"><i class="bi bi-arrow-clockwise" style="margin-right:6px;"></i> Refresh</button>
+        <div style="display:flex; gap:10px;">
+          <button id="addAgentBtn" class="btn btn-gold" onclick="openAgentModal()" hidden><i class="bi bi-person-plus" style="margin-right:6px;"></i> Add Team Member</button>
+          <button class="btn btn-ink" onclick="loadData()"><i class="bi bi-arrow-clockwise" style="margin-right:6px;"></i> Refresh</button>
+        </div>
       </div>
       
       <table>
@@ -172,9 +195,46 @@
     </main>
   </div>
 
+  <!-- ADD AGENT MODAL -->
+  <div id="agentModal" class="modal-overlay" hidden>
+    <div class="modal-card">
+      <h3 style="margin-top:0; margin-bottom: 20px;">Add New Team Member</h3>
+      <form onsubmit="handleCreateAgent(event)">
+        <div class="field">
+          <label>Full Name</label>
+          <input type="text" id="newAgentName" placeholder="Chris Uccio" required>
+        </div>
+        <div class="field">
+          <label>Username</label>
+          <input type="text" id="newAgentUsername" placeholder="chris" required>
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="newAgentEmail" placeholder="chris@dwyerinsurancegroup.com" required>
+        </div>
+        <div class="field">
+          <label>Role</label>
+          <select id="newAgentRole">
+            <option value="agent">Licensed / Client Experience Agent</option>
+            <option value="admin">Administrator / Operation Manager</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="newAgentPassword" placeholder="••••••••" required>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:24px;">
+          <button type="button" class="btn" style="background:#eee; width:50%;" onclick="closeAgentModal()">Cancel</button>
+          <button type="submit" id="saveAgentBtn" class="btn btn-gold" style="width:50%;">Save Agent</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyTzqfN86dfKKVjfVHv7p2TPJtVKR8QuemEYXQP6Lft0RcSSZJoq1rwnFC9OTQKiuu5ag/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwpcp-JMrPo0mpJXnQx4Mp9uR_Se0VwVskQUZ5J9SW-dePaCIjqSn3VE0PRd3pBvfkXyw/exec';
     let currentSession = null;
+    let availableAgents = [];
 
     async function apiCall(action, data = {}) {
       const payload = { action, token: currentSession ? currentSession.token : null, ...data };
@@ -190,7 +250,6 @@
       e.preventDefault();
       const errBox = document.getElementById('loginError');
       const btn = document.getElementById('submitBtn');
-      
       errBox.innerText = '';
       btn.innerText = 'Authenticating...';
       btn.disabled = true;
@@ -204,8 +263,13 @@
           currentSession = res;
           document.getElementById('loginScreen').hidden = true;
           document.getElementById('appShell').hidden = false;
-          if (res.user && res.user.name) {
+          
+          if (res.user) {
             document.getElementById('agentProfileName').innerText = res.user.name;
+            document.getElementById('agentProfileRole').innerText = res.user.role === 'admin' ? 'Administrator' : 'Agent';
+            if (res.user.role === 'admin') {
+              document.getElementById('addAgentBtn').hidden = false;
+            }
           }
           loadData();
         } else {
@@ -223,9 +287,8 @@
       try {
         const res = await apiCall('bootstrap');
         if (res.ok) {
+          availableAgents = res.agents || [];
           renderLeads(res.contacts || []);
-        } else {
-          console.error("API Error:", res.error);
         }
       } catch (e) {
         console.error("Error loading data:", e);
@@ -244,25 +307,76 @@
 
     function renderLeads(contacts) {
       const tbody = document.getElementById('leadsBody');
+      const isAdmin = currentSession && currentSession.user && currentSession.user.role === 'admin';
+
       if (!contacts.length) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color: var(--muted);">No leads found in WebLeads.</td></tr>';
         return;
       }
 
-      tbody.innerHTML = contacts.map(c => `
-        <tr>
-          <td style="white-space:nowrap; font-size:12px; opacity:0.8;">${formatDate(c.date)}</td>
-          <td><strong>${c.firstName} ${c.lastName}</strong></td>
-          <td>
-            <div>${c.email}</div>
-            <div style="font-size:12px; color:var(--muted);">${c.phone}</div>
-          </td>
-          <td>${c.zip || '—'}</td>
-          <td><span class="badge-type">${c.type || 'N/A'}</span></td>
-          <td><span class="badge-status">${c.status || 'New'}</span></td>
-          <td>${c.agent || 'Unassigned'}</td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = contacts.map(c => {
+        const agentOptions = ['Unassigned', ...availableAgents.map(a => a.name)].map(name => `
+          <option value="${name}" ${c.agent === name ? 'selected' : ''}>${name}</option>
+        `).join('');
+
+        const agentCell = isAdmin 
+          ? `<select class="agent-select" onchange="updateLeadAgent(${c.rowId}, this.value)">${agentOptions}</select>`
+          : `<strong>${c.agent || 'Unassigned'}</strong>`;
+
+        return `
+          <tr>
+            <td style="white-space:nowrap; font-size:12px; opacity:0.8;">${formatDate(c.date)}</td>
+            <td><strong>${c.firstName} ${c.lastName}</strong></td>
+            <td>
+              <div>${c.email}</div>
+              <div style="font-size:12px; color:var(--muted);">${c.phone}</div>
+            </td>
+            <td>${c.zip || '—'}</td>
+            <td><span class="badge-type">${c.type || 'N/A'}</span></td>
+            <td><span class="badge-status">${c.status || 'New'}</span></td>
+            <td>${agentCell}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function updateLeadAgent(rowId, agentName) {
+      try {
+        await apiCall('assignLead', { rowId, agentName });
+      } catch (e) {
+        alert("Failed to update assigned agent.");
+      }
+    }
+
+    function openAgentModal() { document.getElementById('agentModal').hidden = false; }
+    function closeAgentModal() { document.getElementById('agentModal').hidden = true; }
+
+    async function handleCreateAgent(e) {
+      e.preventDefault();
+      const saveBtn = document.getElementById('saveAgentBtn');
+      saveBtn.innerText = 'Saving...'; saveBtn.disabled = true;
+
+      const payload = {
+        name: document.getElementById('newAgentName').value,
+        username: document.getElementById('newAgentUsername').value,
+        email: document.getElementById('newAgentEmail').value,
+        role: document.getElementById('newAgentRole').value,
+        password: document.getElementById('newAgentPassword').value
+      };
+
+      try {
+        const res = await apiCall('addAgent', payload);
+        if (res.ok) {
+          closeAgentModal();
+          loadData();
+        } else {
+          alert("Error adding agent: " + (res.error || 'Unknown error'));
+        }
+      } catch (err) {
+        alert("Connection error.");
+      } finally {
+        saveBtn.innerText = 'Save Agent'; saveBtn.disabled = false;
+      }
     }
 
     function handleLogout() {
