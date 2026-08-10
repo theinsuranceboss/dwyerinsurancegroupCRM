@@ -86,7 +86,7 @@
     /* APP LAYOUT */
     .app-shell { display: grid; grid-template-columns: 260px 1fr; gap: 20px; padding: 20px; min-height: 100vh; }
     .sidebar { background: var(--ink); border-radius: var(--radius-xl); padding: 28px 20px; color: white; display: flex; flex-direction: column; }
-    .sidebar-logo { max-width: 160px; width: 100%; margin: 0 auto; display: block; }
+    .sidebar-logo { max-width: 180px; width: 100%; margin: 0 auto; display: block; }
     .workspace { background: rgba(255,255,255,.95); border-radius: var(--radius-xl); padding: 32px; box-shadow: var(--shadow); overflow-x: auto; }
 
     .nav-btn { 
@@ -142,7 +142,7 @@
         <button class="nav-btn" id="btnAgents" onclick="switchTab('agents')"><i class="bi bi-people-fill"></i> Agents & Users</button>
       </div>
       <div style="margin-top: auto;">
-        <div id="agentProfileName" style="font-size: 14px; font-weight: 700; margin-bottom: 4px;"></div>
+        <div id="agentProfileName" style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">Suzanne Dwyer</div>
         <div id="agentProfileRole" style="font-size: 12px; opacity: 0.6; margin-bottom: 12px;">Administrator</div>
         <button onclick="handleLogout()" class="btn btn-ink" style="width:100%; height:40px;"><i class="bi bi-box-arrow-right" style="margin-right: 8px;"></i> Log Out</button>
       </div>
@@ -210,7 +210,9 @@
           currentSession = res;
           document.getElementById('loginScreen').hidden = true;
           document.getElementById('appShell').hidden = false;
-          document.getElementById('agentProfileName').innerText = res.user.name;
+          if (res.user && res.user.name) {
+            document.getElementById('agentProfileName').innerText = res.user.name;
+          }
           loadData();
         } else {
           document.getElementById('loginError').innerText = res.error || 'Authentication failed.';
@@ -221,32 +223,53 @@
     }
 
     async function loadData() {
-      const res = await apiCall('bootstrap');
-      if (res.ok) {
-        renderLeads(res.contacts || []);
-        renderAgents(res.sellers || []);
+      try {
+        const res = await apiCall('bootstrap');
+        if (res.ok) {
+          renderLeads(res.contacts || []);
+          renderAgents(res.sellers || []);
+        }
+      } catch (e) {
+        console.error("Error loading data:", e);
+      }
+    }
+
+    function formatDate(rawDate) {
+      if (!rawDate) return '—';
+      try {
+        const d = new Date(rawDate);
+        return isNaN(d.getTime()) ? String(rawDate) : d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      } catch (e) {
+        return String(rawDate);
       }
     }
 
     function renderLeads(contacts) {
-      document.getElementById('leadsBody').innerHTML = contacts.length ? contacts.map(c => `
+      const tbody = document.getElementById('leadsBody');
+      if (!contacts.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color: var(--muted);">No leads found in WebLeads.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = contacts.map(c => `
         <tr>
-          <td style="white-space:nowrap; opacity:0.8;">${c.date ? new Date(c.date).toLocaleDateString() : '—'}</td>
-          <td><strong>${c.firstName || ''} ${c.lastName || ''}</strong></td>
+          <td style="white-space:nowrap; font-size:12px; opacity:0.8;">${formatDate(c.date)}</td>
+          <td><strong>${c.firstName} ${c.lastName}</strong></td>
           <td>
-            <div>${c.email || ''}</div>
-            <div style="font-size:12px; color:var(--muted);">${c.phone || ''}</div>
+            <div>${c.email}</div>
+            <div style="font-size:12px; color:var(--muted);">${c.phone}</div>
           </td>
           <td>${c.zip || '—'}</td>
           <td><span class="badge-type">${c.type || 'N/A'}</span></td>
           <td><span class="badge-status">${c.status || 'New'}</span></td>
           <td>${c.agent || 'Unassigned'}</td>
         </tr>
-      `).join('') : '<tr><td colspan="7" style="text-align:center; padding:30px; color: var(--muted);">No leads found in Sheet1.</td></tr>';
+      `).join('');
     }
 
     function renderAgents(agents) {
-      document.getElementById('agentsBody').innerHTML = agents.length ? agents.map(a => `
+      const tbody = document.getElementById('agentsBody');
+      tbody.innerHTML = agents.length ? agents.map(a => `
         <tr>
           <td><strong>${a.name}</strong></td>
           <td><code>${a.username}</code></td>
